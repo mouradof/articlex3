@@ -2,6 +2,7 @@ package com.example.common_library.utils;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,10 +10,12 @@ import java.util.List;
 @NoArgsConstructor
 public class StructuredFile {
     private List<StructuredLine> lineStructures = new ArrayList<>();
-    private String fieldSeparator;
-    private String EOL;
-    private String targetFilename;
-    private String targetExtension;
+    // Valeur par défaut définie pour fieldSeparator (par exemple, une virgule)
+    private String fieldSeparator = ",";
+    // Valeurs par défaut pour d'autres propriétés (à adapter selon vos besoins)
+    private String EOL = "\n";
+    private String targetFilename = "output";
+    private String targetExtension = ".txt";
     private List<String> headerLines = new ArrayList<>();
     private List<String> footerLines = new ArrayList<>();
 
@@ -39,12 +42,12 @@ public class StructuredFile {
 
         public StructuredLine(String identifier, boolean isHeader) {
             this.identifier = identifier;
-            this.lineType = lineType;
             this.isHeader = isHeader;
         }
 
         public StructuredLine(String identifier, String lineType) {
             this(identifier, true);
+            this.lineType = lineType;
         }
 
         public StructuredDataGroup createStructuredDataGroup(String[] fileLineFields) {

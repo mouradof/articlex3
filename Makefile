@@ -40,7 +40,7 @@ run-p1:
 consume-p0:
 	docker exec -it kafka bash -c 'cd /opt/bitnami/kafka/bin && \
 	./kafka-console-consumer.sh \
-	  --bootstrap-server localhost:9092 \
+	  --bootstrap-server kafka:9092 \
 	  --topic article_validated \
 	  --from-beginning'
 

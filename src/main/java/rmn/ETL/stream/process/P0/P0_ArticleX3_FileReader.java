@@ -23,7 +23,7 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
 
     @Autowired
     public P0_ArticleX3_FileReader(StructuredFile structureDescription, TopicNames<ARTICLEX3> topicNames,
-                                   @Value("${KAFKA_BROKER:localhost:9092}") String kafkaBroker,
+                                   @Value("${KAFKA_BROKER:kafka:9092}") String kafkaBroker,
                                    @Value("${KAFKA_TOPIC_STAGING:staging_topic}") String stagingTopicName) {
         super(structureDescription, ARTICLEX3.class, topicNames, kafkaBroker, stagingTopicName);
     }

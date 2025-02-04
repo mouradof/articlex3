@@ -25,6 +25,8 @@ configurations.all {
 }
 
 dependencies {
+	implementation(project(":common-library"))
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")

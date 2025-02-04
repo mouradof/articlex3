@@ -2,11 +2,11 @@ package com.example.common_library;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication  // Annotation Spring qui marque cette classe comme point d'entrée principal de l'application Spring Boot.
+@SpringBootApplication
 public class CommonLibraryApplication {
 	public static void main(String[] args) {
-		// Lance l'application Spring Boot
 		SpringApplication.run(CommonLibraryApplication.class, args);
 	}
 }
