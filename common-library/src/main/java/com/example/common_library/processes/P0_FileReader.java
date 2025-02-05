@@ -25,7 +25,7 @@ public abstract class P0_FileReader<T> {
     protected TopicNames<T> topicNames;
 
     private KafkaProducer<String, String> producer;
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     private final String kafkaBroker;
     private final String stagingTopicName;

@@ -9,6 +9,7 @@ FROM openjdk:17-jdk-slim
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
-ENV INPUT_FILE=/app/input/dilicom_input.txt
-ENV OUTPUT_TOPIC=article_validated
+ENV INPUT_DIR=/app/input
+ENV OUTPUT_TOPIC=article_staging
+ENV SPRING_PROFILES_ACTIVE=P0
 ENTRYPOINT ["java", "-jar", "app.jar"]

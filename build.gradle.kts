@@ -14,9 +14,9 @@ java {
 }
 
 repositories {
-	mavenCentral() // Pour les dépendances externes
+	mavenCentral()
 	maven {
-		url = uri("file:///Users/mourad/m2/local-repo") // Dépôt Maven local
+		url = uri("file:///Users/mourad/m2/local-repo")
 	}
 }
 
@@ -33,7 +33,6 @@ dependencies {
 	implementation("org.springframework.kafka:spring-kafka")
 	implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.2")
 
-	// Lombok
 	implementation("org.projectlombok:lombok:1.18.24")
 	annotationProcessor("org.projectlombok:lombok:1.18.24")
 

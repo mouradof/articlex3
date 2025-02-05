@@ -4,22 +4,20 @@ import com.example.common_library.processes.P0_FileReader;
 import com.example.common_library.utils.StructuredDataGroup;
 import com.example.common_library.utils.StructuredFile;
 import com.example.common_library.utils.TopicNames;
+import org.springframework.context.annotation.Profile;
 import rmn.ETL.stream.entities.ARTICLEX3;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.util.Arrays;
 
 @Slf4j
 @Service
+@Profile("P0")
 public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
-
-    @Value("${INPUT_FILE}")
-    private String inputFilePath;
 
     @Autowired
     public P0_ArticleX3_FileReader(StructuredFile structureDescription, TopicNames<ARTICLEX3> topicNames,
@@ -28,23 +26,16 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
         super(structureDescription, ARTICLEX3.class, topicNames, kafkaBroker, stagingTopicName);
     }
 
-    @PostConstruct
-    public void initFileReading() {
-        if (inputFilePath == null || inputFilePath.isEmpty()) {
-            log.warn("La variable d'environnement INPUT_FILE est vide ou non définie.");
-            return;
-        }
-        log.info("Lecture du fichier d'entrée : {}", inputFilePath);
-
+    public void processFile(File file) {
+        log.info("Traitement du fichier : {}", file.getAbsolutePath());
         try {
-            File file = new File(inputFilePath);
             if (!file.exists()) {
                 log.error("Le fichier {} n'existe pas !", file.getAbsolutePath());
                 return;
             }
-            processFile(file);
+            super.processFile(file);
         } catch (Exception e) {
-            log.error("Erreur lors de la lecture du fichier :", e);
+            log.error("Erreur lors du traitement du fichier {} :", file.getAbsolutePath(), e);
         }
     }
 
@@ -84,8 +75,7 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                     return;
                 }
                 if (articleX3Entity.getLastLine("I") != null) {
-                    articleX3Entity
-                            .getLastLine("I")
+                    articleX3Entity.getLastLine("I")
                             .addField(
                                     fileLineFields[1],
                                     new StructuredDataGroup.TranslatedField.TranslatedValue(fileLineFields[2], fileLineFields[3])
@@ -101,8 +91,7 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                     return;
                 }
                 if (articleX3Entity.getLastLine("M") != null) {
-                    articleX3Entity
-                            .getLastLine("M")
+                    articleX3Entity.getLastLine("M")
                             .addField(
                                     fileLineFields[1],
                                     new StructuredDataGroup.TranslatedField.TranslatedValue(fileLineFields[2], fileLineFields[3])

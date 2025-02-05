@@ -15,29 +15,29 @@ public class StructuredFileConfig {
         StructuredFile.StructuredLine lineI = new StructuredFile.StructuredLine("I", true);
         lineI.setLineType("I");
         lineI.setFieldNames(Arrays.asList(
-                "TCLCOD","YCLEALCE","ITMREF","EANCOD","DES1AXX","DES2AXX","DES3AXX","ITMSTA","YDISPCDE","LIFSTRDAT",
-                "LIFENDDAT","YPARDAT","YUNITE","STU","WEU","ITMWEI","YPOIDSNU"
+                "TCLCOD", "YCLEALCE", "ITMREF", "EANCOD", "DES1AXX", "DES2AXX", "DES3AXX", "ITMSTA", "YDISPCDE",
+                "LIFSTRDAT", "LIFENDDAT", "YPARDAT", "YUNITE", "STU", "WEU", "ITMWEI", "YPOIDSNU", "DES1"  // Champ ajouté !
         ));
         fileStructure.addLineStructure(lineI);
 
         StructuredFile.StructuredLine lineITRD = new StructuredFile.StructuredLine("ITRD", false);
         lineITRD.setLineType("ITRD");
         lineITRD.setFieldNames(Arrays.asList(
-                "FIELDNAME","LANG","TRADUCTION"
+                "FIELDNAME", "LANG", "TRADUCTION"
         ));
         fileStructure.addLineStructure(lineITRD);
 
         StructuredFile.StructuredLine lineM = new StructuredFile.StructuredLine("M", false);
         lineM.setLineType("M");
         lineM.setFieldNames(Arrays.asList(
-                "ILLUST","FACON","PAGIN","NBPHOTO","WEIPAP1","WEICOUV"
+                "ILLUST", "FACON", "PAGIN", "NBPHOTO", "WEIPAP1", "WEICOUV"
         ));
         fileStructure.addLineStructure(lineM);
 
         StructuredFile.StructuredLine lineMTRD = new StructuredFile.StructuredLine("MTRD", false);
         lineMTRD.setLineType("MTRD");
         lineMTRD.setFieldNames(Arrays.asList(
-                "FACON","LANG","TRADUCTION"
+                "FACON", "LANG", "TRADUCTION"
         ));
         fileStructure.addLineStructure(lineMTRD);
 

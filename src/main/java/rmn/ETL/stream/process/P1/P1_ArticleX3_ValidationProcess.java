@@ -2,6 +2,7 @@ package rmn.ETL.stream.process.P1;
 
 import com.example.common_library.processes.P1_Common_ValidationProcess;
 import com.example.common_library.utils.TopicNames;
+import org.springframework.context.annotation.Profile;
 import rmn.ETL.stream.entities.ARTICLEX3;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Slf4j
 @Service
+@Profile("P1")
 public class P1_ArticleX3_ValidationProcess extends P1_Common_ValidationProcess<ARTICLEX3> implements CommandLineRunner {
 
     @Autowired
@@ -23,7 +25,6 @@ public class P1_ArticleX3_ValidationProcess extends P1_Common_ValidationProcess<
 
     @Override
     public List<String> validateEntitySource(ARTICLEX3 entity) {
-        // Votre logique de validation existante
         List<String> errors = new ArrayList<>();
 
         if (entity.getStructuredDataGroups().isEmpty()) {
@@ -51,6 +52,6 @@ public class P1_ArticleX3_ValidationProcess extends P1_Common_ValidationProcess<
     @Override
     public void run(String... args) throws Exception {
         log.info("Starting P1_ArticleX3_ValidationProcess...");
-        runProcess(); // Appelle la méthode de consommation et validation Kafka
+        runProcess();
     }
 }

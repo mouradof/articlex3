@@ -1,19 +1,17 @@
-# Étape d'exécution
-FROM openjdk:17-jdk-slim
-
+FROM gradle:7.6-jdk17 AS builder
 WORKDIR /app
+COPY ./build.gradle.kts ./settings.gradle.kts ./
+COPY ./common-library ./common-library
+COPY ./src ./src
+RUN gradle clean build --no-daemon --info -x test
 
-# Copier le JAR construit depuis le sous-projet p1
-COPY p1/build/libs/ArticleX3-0.0.1-SNAPSHOT-p1.jar app.jar
-
-# Exposer le port si nécessaire (ex. 8080 pour Spring Boot)
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
-
-# Définir les variables d'environnement avec des valeurs par défaut
-ENV KAFKA_BROKER=kafka:9092
+ENV INPUT_DIR=/app/input
 ENV KAFKA_TOPIC_STAGING=article_validated
 ENV KAFKA_TOPIC_VALIDATED=article_transformed
 ENV KAFKA_TOPIC_REJECTED=article_rejected
-
-# Définir le point d'entrée de l'application
+ENV SPRING_PROFILES_ACTIVE=P1
 ENTRYPOINT ["java", "-jar", "app.jar"]

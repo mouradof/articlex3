@@ -14,7 +14,6 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -41,16 +40,26 @@ public abstract class P1_Common_ValidationProcess<T> {
 
     @Async
     public void runProcess() {
-        Properties config = loadConfig();  // Chargement de la configuration
-        Properties stagingConsumerConfig = loadConsumerConfig(config);  // Chargement des configurations pour le consommateur Kafka
+        Properties config = loadConfig();  // Chargement de la configuration (inclut la variable d'environnement pour le bootstrap server)
+        Properties stagingConsumerConfig = loadConsumerConfig(config);  // Chargement de la configuration pour le consommateur Kafka
 
         stagingConsumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, this.getClass().getSimpleName());
 
-        String idEntity = "";
+        // Récupération des noms de topics en donnant la priorité aux variables d'environnement
+        String stagingTopic = System.getenv("KAFKA_TOPIC_STAGING");
+        if (stagingTopic == null) {
+            stagingTopic = topicNames.getStagingTopicName();
+        }
 
-        String stagingTopic = topicNames.getStagingTopicName();  // Topic source de staging
-        String validatedTopic = topicNames.getValidatedTopicName();  // Topic pour les entités validées
-        String rejectedTopic = topicNames.getRejectedTopicName();  // Topic pour les entités rejetées
+        String validatedTopic = System.getenv("KAFKA_TOPIC_VALIDATED");
+        if (validatedTopic == null) {
+            validatedTopic = topicNames.getValidatedTopicName();
+        }
+
+        String rejectedTopic = System.getenv("KAFKA_TOPIC_REJECTED");
+        if (rejectedTopic == null) {
+            rejectedTopic = topicNames.getRejectedTopicName();
+        }
 
         logger.info("TOPIC source: {}", stagingTopic);
         logger.info("TOPIC cible validation: {}", validatedTopic);
@@ -67,11 +76,11 @@ public abstract class P1_Common_ValidationProcess<T> {
                 ConsumerRecords<String, String> records = stagingConsumer.poll(Duration.ofMillis(maxPollInterval));
 
                 for (ConsumerRecord<String, String> record : records) {
-                    processRecord(record, producer, validatedTopic, rejectedTopic, idEntity);
+                    processRecord(record, producer, validatedTopic, rejectedTopic, "");
                 }
             }
         } catch (Exception e) {
-            logger.error("Error during process execution", e);  // Capture les erreurs pendant le processus
+            logger.error("Error during process execution", e);
         }
     }
 
@@ -110,34 +119,29 @@ public abstract class P1_Common_ValidationProcess<T> {
         String validatedJsonEntity = serialiseToJSON(entity);
         ProducerRecord<String, String> validatedRecordToSend = new ProducerRecord<>(validatedTopic, validatedJsonEntity);
 
-        // Ajoute des en-têtes standards à l'enregistrement
         addStandardHeadersToRecord(validatedRecordToSend, idEntity, record.offset());
-        producer.send(validatedRecordToSend);  // Envoie l'enregistrement validé
+        producer.send(validatedRecordToSend);
         logger.info("Offset validated: {}", record.offset());
     }
 
-    // Méthode qui envoie un enregistrement rejeté sur Kafka
     private void sendRejectedRecord(KafkaProducer<String, String> producer, String rejectedTopic,
                                     ConsumerRecord<String, String> record, T entity, String idEntity, int retryCount,
                                     List<String> errorMessages) {
-        String rejectedJsonEntity = serialiseToJSON(entity);  // Sérialise l'entité en JSON
+        String rejectedJsonEntity = serialiseToJSON(entity);
         ProducerRecord<String, String> rejectedRecord = new ProducerRecord<>(rejectedTopic, rejectedJsonEntity);
 
-        // Ajoute des en-têtes standards et d'autres en-têtes spécifiques aux enregistrements rejetés
         addStandardHeadersToRecord(rejectedRecord, idEntity, record.offset());
-        rejectedRecord.headers().add(new RecordHeader("RETRY_DELAY", "10000".getBytes()));  // Ajoute un délai de réessai
+        rejectedRecord.headers().add(new RecordHeader("RETRY_DELAY", "10000".getBytes()));
         rejectedRecord.headers().add(new RecordHeader("RETRY_COUNT", String.valueOf(retryCount).getBytes()));
 
-        // Ajoute les messages d'erreur
         for (String errorMessage : errorMessages) {
             rejectedRecord.headers().add(new RecordHeader("ERROR_LIBELLE", errorMessage.getBytes()));
         }
 
-        producer.send(rejectedRecord);  // Envoie l'enregistrement rejeté
+        producer.send(rejectedRecord);
         logger.info("Offset rejected: {}", record.offset());
     }
 
-    // Méthode qui ajoute des en-têtes standards aux enregistrements Kafka
     private void addStandardHeadersToRecord(ProducerRecord<String, String> record, String idEntity, long sourceOffset) {
         record.headers().add(new RecordHeader("SOURCE_TYPE", "TOPIC".getBytes()));
         record.headers().add(new RecordHeader("SOURCE_NAME", "STAGING_DATA".getBytes()));
@@ -146,53 +150,59 @@ public abstract class P1_Common_ValidationProcess<T> {
         record.headers().add(new RecordHeader("ENTITY_ID", idEntity.getBytes()));
     }
 
-    // Sérialisation d'un objet en JSON
     private String serialiseToJSON(T objectToSerialize) {
         try {
-            return objectMapper.writeValueAsString(objectToSerialize);  // Sérialisation de l'entité
+            return objectMapper.writeValueAsString(objectToSerialize);
         } catch (Exception e) {
             logger.error("Error serializing to JSON", e);
             return null;
         }
     }
 
-    // Désérialisation d'une chaîne JSON en objet de type T
     private T deserializeFromJSON(String json, Class<T> clazz) {
         try {
-            return objectMapper.readValue(json, clazz);  // Désérialisation
+            return objectMapper.readValue(json, clazz);
         } catch (Exception e) {
             logger.error("Error deserializing JSON", e);
             return null;
         }
     }
 
-    // Chargement de la configuration générale
+    // On charge ici la configuration générale en vérifiant la variable d'environnement pour le bootstrap servers
     private Properties loadConfig() {
         Properties properties = new Properties();
-        // Vous pouvez charger des configurations supplémentaires ici si nécessaire
+        String bootstrapServers = System.getenv("SPRING_KAFKA_BOOTSTRAP_SERVERS");
+        if (bootstrapServers != null) {
+            properties.setProperty("spring.kafka.bootstrap-servers", bootstrapServers);
+        }
         return properties;
     }
 
-    // Chargement de la configuration du consommateur Kafka
     private Properties loadConsumerConfig(Properties config) {
         Properties consumerConfig = new Properties();
-        consumerConfig.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getProperty("spring.kafka.bootstrap-servers", "localhost:9092"));
-        consumerConfig.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, config.getProperty("spring.kafka.consumer.key-deserializer", "org.apache.kafka.common.serialization.StringDeserializer"));
-        consumerConfig.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, config.getProperty("spring.kafka.consumer.value-deserializer", "org.apache.kafka.common.serialization.StringDeserializer"));
-        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, config.getProperty("spring.kafka.consumer.auto-offset-reset", "earliest"));
-        consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, config.getProperty("spring.kafka.consumer.max-poll-interval-ms", "300000"));
+        consumerConfig.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                config.getProperty("spring.kafka.bootstrap-servers", "localhost:9092"));
+        consumerConfig.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                config.getProperty("spring.kafka.consumer.key-deserializer", "org.apache.kafka.common.serialization.StringDeserializer"));
+        consumerConfig.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                config.getProperty("spring.kafka.consumer.value-deserializer", "org.apache.kafka.common.serialization.StringDeserializer"));
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                config.getProperty("spring.kafka.consumer.auto-offset-reset", "earliest"));
+        consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
+                config.getProperty("spring.kafka.consumer.max-poll-interval-ms", "300000"));
         return consumerConfig;
     }
 
-    // Chargement de la configuration du producteur Kafka
     private Properties loadProducerConfig(Properties config) {
         Properties producerConfig = new Properties();
-        producerConfig.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getProperty("spring.kafka.bootstrap-servers", "localhost:9092"));
-        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, config.getProperty("spring.kafka.producer.key-serializer", "org.apache.kafka.common.serialization.StringSerializer"));
-        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, config.getProperty("spring.kafka.producer.value-serializer", "org.apache.kafka.common.serialization.StringSerializer"));
+        producerConfig.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                config.getProperty("spring.kafka.bootstrap-servers", "localhost:9092"));
+        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                config.getProperty("spring.kafka.producer.key-serializer", "org.apache.kafka.common.serialization.StringSerializer"));
+        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                config.getProperty("spring.kafka.producer.value-serializer", "org.apache.kafka.common.serialization.StringSerializer"));
         return producerConfig;
     }
 
-    // Méthode abstraite qui doit être implémentée pour valider l'entité source
     public abstract List<String> validateEntitySource(T sourceEntity);
 }
