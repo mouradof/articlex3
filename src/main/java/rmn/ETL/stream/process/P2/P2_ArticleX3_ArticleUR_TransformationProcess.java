@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 @Slf4j
 @Service
@@ -16,6 +17,25 @@ public class P2_ArticleX3_ArticleUR_TransformationProcess
 
     public P2_ArticleX3_ArticleUR_TransformationProcess() {
         super(ARTICLEX3.class, ARTICLEX3_UR.class);
+    }
+
+    @Override
+    protected Properties loadConfig() {
+        Properties props = new Properties();
+        String bootstrapServers = System.getenv("KAFKA_BROKER");
+        if (bootstrapServers == null || bootstrapServers.isBlank()) {
+            bootstrapServers = "kafka:9092";
+        }
+        props.put("bootstrap.servers", bootstrapServers);
+
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "earliest");
+
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        return props;
     }
 
     @Override

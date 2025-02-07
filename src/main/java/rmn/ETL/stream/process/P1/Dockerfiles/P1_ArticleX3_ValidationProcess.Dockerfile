@@ -10,8 +10,8 @@ WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
 ENV INPUT_DIR=/app/input
-ENV KAFKA_TOPIC_STAGING=article_validated
-ENV KAFKA_TOPIC_VALIDATED=article_transformed
+ENV KAFKA_TOPIC_STAGING=article_staging
+ENV KAFKA_TOPIC_VALIDATED=article_validated
 ENV KAFKA_TOPIC_REJECTED=article_rejected
 ENV SPRING_PROFILES_ACTIVE=P1
 ENTRYPOINT ["java", "-jar", "app.jar"]

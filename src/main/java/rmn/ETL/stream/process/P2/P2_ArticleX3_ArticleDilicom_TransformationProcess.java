@@ -6,6 +6,8 @@ import rmn.ETL.stream.entities.ARTICLE_DILICOM;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Properties;
+
 @Slf4j
 @Service
 public class P2_ArticleX3_ArticleDilicom_TransformationProcess
@@ -25,6 +27,25 @@ public class P2_ArticleX3_ArticleDilicom_TransformationProcess
 
         log.info("Transformed to ARTICLE_DILICOM: {}", targetEntity);
         return targetEntity;
+    }
+
+    @Override
+    protected Properties loadConfig() {
+        Properties props = new Properties();
+        String bootstrapServers = System.getenv("KAFKA_BROKER");
+        if (bootstrapServers == null || bootstrapServers.isBlank()) {
+            bootstrapServers = "kafka:9092";
+        }
+        props.put("bootstrap.servers", bootstrapServers);
+
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "earliest");
+
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        return props;
     }
 
     private String getTrimmedFieldValue(ARTICLEX3 entity, String lineType, String fieldName) {
