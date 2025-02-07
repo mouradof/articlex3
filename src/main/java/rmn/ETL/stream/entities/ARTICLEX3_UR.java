@@ -6,6 +6,12 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents the UR details for an ARTICLEX3 entity.
+ * <p>
+ * This entity encapsulates identification codes, descriptive information, a sales unit,
+ * and nested lists for items, lot types, hierarchies, attributes, and VAT details.
+ */
 @Data
 @NoArgsConstructor
 public class ARTICLEX3_UR {
@@ -22,6 +28,9 @@ public class ARTICLEX3_UR {
     private List<Vat> vats;
     private String rmnEntityId;
 
+    /**
+     * Represents a lot type associated with the article.
+     */
     @Data
     @NoArgsConstructor
     public static class LotType {
@@ -29,18 +38,27 @@ public class ARTICLEX3_UR {
         private boolean remove;
     }
 
+    /**
+     * Represents an item, including its code and related barcode information.
+     */
     @Data
     @NoArgsConstructor
     public static class Item {
         private String code;
         private Barcodes barcodes;
 
+        /**
+         * Encapsulates both primary and secondary barcode details.
+         */
         @Data
         @NoArgsConstructor
         public static class Barcodes {
             private PrimaryBarcode primaryBarcode;
             private SecondaryBarcode secondaryBarcode;
 
+            /**
+             * Represents the primary barcode details.
+             */
             @Data
             @NoArgsConstructor
             public static class PrimaryBarcode {
@@ -48,6 +66,9 @@ public class ARTICLEX3_UR {
                 private boolean remove;
             }
 
+            /**
+             * Represents the secondary barcode details.
+             */
             @Data
             @NoArgsConstructor
             public static class SecondaryBarcode {
@@ -58,12 +79,18 @@ public class ARTICLEX3_UR {
         }
     }
 
+    /**
+     * Represents a hierarchy level detail.
+     */
     @Data
     @NoArgsConstructor
     public static class Hierarchy {
         private String hierarchyLevel;
     }
 
+    /**
+     * Represents an attribute associated with the article.
+     */
     @Data
     @NoArgsConstructor
     public static class Attribute {
@@ -72,6 +99,9 @@ public class ARTICLEX3_UR {
         private boolean remove;
     }
 
+    /**
+     * Represents VAT information including VAT and country codes.
+     */
     @Data
     @NoArgsConstructor
     public static class Vat {

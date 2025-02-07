@@ -4,21 +4,36 @@ import com.example.common_library.processes.P0_FileReader;
 import com.example.common_library.utils.StructuredDataGroup;
 import com.example.common_library.utils.StructuredFile;
 import com.example.common_library.utils.TopicNames;
-import org.springframework.context.annotation.Profile;
-import rmn.ETL.stream.entities.ARTICLEX3;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+import rmn.ETL.stream.entities.ARTICLEX3;
 
 import java.io.File;
 import java.util.Arrays;
 
+/**
+ * Processes Article X3 files in the P0 profile.
+ * <p>
+ * This service reads a file, parses its structured lines, creates or updates an ARTICLEX3 entity,
+ * and delegates further processing (e.g., sending to a Kafka topic) to the superclass.
+ */
 @Slf4j
 @Service
 @Profile("P0")
 public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
 
+    /**
+     * Constructs the file reader with the required structured file description, topic names,
+     * and Kafka configuration.
+     *
+     * @param structureDescription the description of the file structure
+     * @param topicNames           the topic names configuration for ARTICLEX3
+     * @param kafkaBroker          the Kafka broker address (default: kafka:9092)
+     * @param stagingTopicName     the Kafka staging topic name (default: staging_topic)
+     */
     @Autowired
     public P0_ArticleX3_FileReader(StructuredFile structureDescription, TopicNames<ARTICLEX3> topicNames,
                                    @Value("${KAFKA_BROKER:kafka:9092}") String kafkaBroker,
@@ -26,19 +41,34 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
         super(structureDescription, ARTICLEX3.class, topicNames, kafkaBroker, stagingTopicName);
     }
 
+    /**
+     * Processes the given file by checking its existence and delegating to the superclass.
+     *
+     * @param file the file to process
+     */
     public void processFile(File file) {
-        log.info("Traitement du fichier : {}", file.getAbsolutePath());
+        log.info("Processing file: {}", file.getAbsolutePath());
         try {
             if (!file.exists()) {
-                log.error("Le fichier {} n'existe pas !", file.getAbsolutePath());
+                log.error("File {} does not exist!", file.getAbsolutePath());
                 return;
             }
             super.processFile(file);
         } catch (Exception e) {
-            log.error("Erreur lors du traitement du fichier {} :", file.getAbsolutePath(), e);
+            log.error("Error processing file {}: ", file.getAbsolutePath(), e);
         }
     }
 
+    /**
+     * Creates or updates the ARTICLEX3 entity based on the line content.
+     * <p>
+     * This method examines the line type and validates the number of fields. Depending on the type,
+     * it either adds a new structured data group or updates an existing one with translation fields.
+     *
+     * @param articleX3Entity the ARTICLEX3 entity to update
+     * @param fileLineFields  the fields from the current line of the file
+     * @param lineStructure   the structure definition for the current line type
+     */
     @Override
     protected void createEntitySource(ARTICLEX3 articleX3Entity, String[] fileLineFields, StructuredFile.StructuredLine lineStructure) {
         log.debug("lineType={} fields={} (count={})",
@@ -48,8 +78,9 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
 
         switch (lineStructure.getLineType()) {
             case "I":
+                // Process header line: require at least 18 fields.
                 if (fileLineFields.length < 18) {
-                    log.error("Ligne I invalide : {} colonnes -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
+                    log.error("Invalid I line: {} columns -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
                     return;
                 }
                 articleX3Entity.addStructuredDataGroup(
@@ -59,8 +90,9 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                 break;
 
             case "M":
+                // Process M line: require at least 7 fields.
                 if (fileLineFields.length < 7) {
-                    log.error("Ligne M invalide : {} colonnes -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
+                    log.error("Invalid M line: {} columns -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
                     return;
                 }
                 articleX3Entity.addStructuredDataGroup(
@@ -70,8 +102,9 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                 break;
 
             case "ITRD":
+                // Process translation for I line: require at least 4 fields.
                 if (fileLineFields.length < 4) {
-                    log.error("Ligne ITRD invalide : {} colonnes -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
+                    log.error("Invalid ITRD line: {} columns -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
                     return;
                 }
                 if (articleX3Entity.getLastLine("I") != null) {
@@ -81,13 +114,14 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                                     new StructuredDataGroup.TranslatedField.TranslatedValue(fileLineFields[2], fileLineFields[3])
                             );
                 } else {
-                    log.warn("Aucune ligne 'I' trouvée pour ITRD");
+                    log.warn("No 'I' line found for ITRD");
                 }
                 break;
 
             case "MTRD":
+                // Process translation for M line: require at least 4 fields.
                 if (fileLineFields.length < 4) {
-                    log.error("Ligne MTRD invalide : {} colonnes -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
+                    log.error("Invalid MTRD line: {} columns -> {}", fileLineFields.length, Arrays.toString(fileLineFields));
                     return;
                 }
                 if (articleX3Entity.getLastLine("M") != null) {
@@ -97,16 +131,17 @@ public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
                                     new StructuredDataGroup.TranslatedField.TranslatedValue(fileLineFields[2], fileLineFields[3])
                             );
                 } else {
-                    log.warn("Aucune ligne 'M' trouvée pour MTRD");
+                    log.warn("No 'M' line found for MTRD");
                 }
                 break;
 
             default:
+                // For unknown line types, add a new structured data group and log a warning.
                 articleX3Entity.addStructuredDataGroup(
                         lineStructure.getLineType(),
                         lineStructure.createStructuredDataGroup(fileLineFields)
                 );
-                log.warn("Type de ligne inconnu: {}", lineStructure.getLineType());
+                log.warn("Unknown line type: {}", lineStructure.getLineType());
         }
     }
 }

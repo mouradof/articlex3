@@ -19,39 +19,42 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
+/**
+ * Consumes transformed ARTICLEX3_BEXT messages from Kafka and writes them to an output file.
+ * <p>
+ * The file is written to a directory specified by the OUTPUT_DIRECTORY environment variable (or a default value).
+ */
 @Slf4j
 @Service
 public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_BEXT> implements CommandLineRunner {
 
-    // Dossier de sortie (utilisé pour construire le chemin complet du fichier de sortie)
+    // Output directory for the result file
     private final String outputDirectory;
-    // Nom fixe du fichier de sortie
+    // Fixed name of the output file
     private final String outputFileName = "bext_final_output.txt";
-    // Structure du fichier (séparateur, EOL, …)
+    // File structure configuration (separator, EOL, etc.)
     private final StructuredFile currentFileStructure;
-
-    // Instance pour la désérialisation (exemple avec Jackson)
+    // ObjectMapper for JSON deserialization
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Constructeur avec injection de la structure du fichier.
-     * On lit ici la variable d'environnement OUTPUT_DIRECTORY.
+     * Constructor with file structure injection.
+     * Reads the OUTPUT_DIRECTORY environment variable with a default value.
+     *
+     * @param currentFileStructure the configuration for the file structure.
      */
     public P3_ArticleBext_FileWriter(StructuredFile currentFileStructure) {
         super(ARTICLEX3_BEXT.class);
         this.currentFileStructure = currentFileStructure;
         String envOutputDir = System.getenv("OUTPUT_DIRECTORY");
-        if (envOutputDir == null || envOutputDir.isBlank()) {
-            this.outputDirectory = "/app/output";
-        } else {
-            this.outputDirectory = envOutputDir;
-        }
+        this.outputDirectory = (envOutputDir == null || envOutputDir.isBlank()) ? "/app/output" : envOutputDir;
         log.info("P3_ArticleBext_FileWriter initialized with outputDirectory: {}", this.outputDirectory);
     }
 
     /**
-     * Configuration du KafkaConsumer pour P3.
-     * Ajout d'un group.id spécifique pour éviter les conflits avec d'autres consommateurs.
+     * Loads Kafka consumer configuration properties.
+     *
+     * @return the Kafka consumer properties.
      */
     @Override
     protected Properties loadConfig() {
@@ -61,17 +64,20 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
             bootstrapServers = "localhost:9092";
         }
         props.put("bootstrap.servers", bootstrapServers);
-        // Définition d'un identifiant de groupe spécifique pour ce consommateur
         props.put("group.id", "p3-articlebext-filewriter");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("auto.offset.reset", "earliest");
-        log.info("loadConfig() set bootstrap.servers to {}", bootstrapServers);
+        log.info("Kafka bootstrap.servers set to {}", bootstrapServers);
         return props;
     }
 
     /**
-     * Formate l'entité ARTICLEX3_BEXT en une chaîne de caractères en se basant sur la structure définie.
+     * Formats an ARTICLEX3_BEXT entity into a string based on the file structure.
+     *
+     * @param articleBext   the entity to format.
+     * @param fileStructure the file structure configuration.
+     * @return the formatted string.
      */
     protected String formatTargetEntity(ARTICLEX3_BEXT articleBext, StructuredFile fileStructure) {
         try {
@@ -102,44 +108,50 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
     }
 
     /**
-     * Méthode utilitaire pour éviter les valeurs nulles.
+     * Returns a safe string value, avoiding nulls.
+     *
+     * @param value the input value.
+     * @return the original value or an empty string if null.
      */
     private String getSafeValue(String value) {
         return value != null ? value : "";
     }
 
     /**
-     * Méthode chargée d'écrire l'entité transformée dans le fichier de sortie.
+     * Writes the transformed entity to the output file.
+     *
+     * @param targetEntity the entity to write.
      */
     @Override
     public void loadTargetEntity(ARTICLEX3_BEXT targetEntity) {
-        log.info("loadTargetEntity() called with entity: {}", targetEntity);
+        log.info("Writing entity: {}", targetEntity);
         String formattedLine = formatTargetEntity(targetEntity, currentFileStructure);
-        // Construit le chemin complet du fichier de sortie
         String fullOutputFilePath = outputDirectory + "/" + outputFileName;
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fullOutputFilePath, true))) {
             writer.write(formattedLine);
             writer.newLine();
             writer.flush();
-            log.info("Entity loaded successfully and written to file: {}", targetEntity.getReference());
+            log.info("Entity written to file: {}", targetEntity.getReference());
         } catch (IOException e) {
             log.error("Error writing entity to file: {}", e.getMessage());
         }
     }
 
     /**
-     * Méthode de débogage appelée après l'initialisation du bean.
+     * Logs initialization details after the bean is constructed.
      */
     @PostConstruct
     public void debugInitialization() {
         String fullPath = outputDirectory + "/" + outputFileName;
         log.info("P3_ArticleBext_FileWriter started with outputDirectory: {} and file name: {}",
                 outputDirectory, outputFileName);
-        log.info("Full output file path will be: {}", fullPath);
+        log.info("Full output file path: {}", fullPath);
     }
 
     /**
-     * La méthode run() déclenche la consommation des messages Kafka dès le démarrage de l'application.
+     * Starts the Kafka consumer process when the application starts.
+     *
+     * @param args command-line arguments.
      */
     @Override
     public void run(String... args) {
@@ -148,26 +160,21 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
     }
 
     /**
-     * Implémente le processus de consommation Kafka et l'écriture dans le fichier.
+     * Consumes messages from Kafka and writes them to the output file.
      */
     private void runProcess() {
-        // Chargement de la configuration Kafka
         Properties props = loadConfig();
-        // Récupération du nom du topic depuis l'environnement ou utilisation d'une valeur par défaut
         String topic = System.getenv("KAFKA_TOPIC_TRANSFORMED");
         if (topic == null || topic.isBlank()) {
             topic = "article_bext_transformed";
         }
-        // Création du consumer Kafka
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             consumer.subscribe(Collections.singletonList(topic));
             log.info("Subscribed to Kafka topic: {}", topic);
-            // Boucle de consommation
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
                     log.info("Received message: key={}, value={}", record.key(), record.value());
-                    // Conversion du message en entité ARTICLEX3_BEXT
                     ARTICLEX3_BEXT entity = convertRecordToEntity(record.value());
                     if (entity != null) {
                         loadTargetEntity(entity);
@@ -180,8 +187,10 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
     }
 
     /**
-     * Méthode de conversion du contenu du message en objet ARTICLEX3_BEXT.
-     * Ici, on suppose que le message est au format JSON.
+     * Converts a JSON message into an ARTICLEX3_BEXT entity.
+     *
+     * @param recordValue the JSON string.
+     * @return the converted entity or null if conversion fails.
      */
     private ARTICLEX3_BEXT convertRecordToEntity(String recordValue) {
         try {

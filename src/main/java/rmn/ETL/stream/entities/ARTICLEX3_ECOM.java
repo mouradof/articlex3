@@ -6,6 +6,13 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents extended e-commerce details for an ARTICLEX3 article.
+ * <p>
+ * This entity aggregates a comprehensive set of attributes related to the e-commerce
+ * representation of an article, including product identifiers, language details, dimensions,
+ * multimedia configurations, and distribution information.
+ */
 @Data
 @NoArgsConstructor
 public class ARTICLEX3_ECOM {

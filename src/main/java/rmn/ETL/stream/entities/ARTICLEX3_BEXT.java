@@ -3,6 +3,13 @@ package rmn.ETL.stream.entities;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Represents the extended attributes for an Article X3.
+ * <p>
+ * This entity encapsulates additional details about an article,
+ * including reference codes, supplier information, lifecycle dates,
+ * and customs details.
+ */
 @Data
 @NoArgsConstructor
 public class ARTICLEX3_BEXT {

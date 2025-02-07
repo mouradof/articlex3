@@ -4,6 +4,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * Spring configuration for scheduling and component scanning
+ * for the P3 process and related packages.
+ */
 @Configuration
 @EnableScheduling
 @ComponentScan(basePackages = {
