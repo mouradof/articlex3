@@ -1,6 +1,5 @@
 package com.example.common_library.processes;
 
-import com.example.common_library.utils.TopicNames;
 import com.example.common_library.utils.StructuredFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,8 +9,9 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
+
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,11 +30,16 @@ public abstract class P0_FileReader<T> {
 
     protected StructuredFile fileStructure;
     private final Class<T> entityClass;
-    protected TopicNames<T> topicNames;
     private KafkaProducer<String, String> producer;
     private final ObjectMapper objectMapper;
-    private final String kafkaBroker;
-    private final String stagingTopicName;
+
+    // Kafka configuration values are injected from the application properties.
+    @Value("${KAFKA_BROKER:kafka:9092}")
+    private String kafkaBroker;
+
+    @Value("${KAFKA_TOPIC_STAGING:staging_topic}")
+    private String stagingTopicName;
+
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
@@ -42,18 +47,11 @@ public abstract class P0_FileReader<T> {
      *
      * @param fileStructureDescription the configuration describing the file structure.
      * @param entityClass              the class of the entity to process.
-     * @param topicNames               the topic names configuration.
-     * @param kafkaBroker              the Kafka broker address.
-     * @param stagingTopicName         the Kafka staging topic name.
      */
     @Autowired
-    public P0_FileReader(StructuredFile fileStructureDescription, Class<T> entityClass, TopicNames<T> topicNames,
-                         String kafkaBroker, String stagingTopicName) {
+    public P0_FileReader(StructuredFile fileStructureDescription, Class<T> entityClass) {
         this.fileStructure = fileStructureDescription;
         this.entityClass = entityClass;
-        this.topicNames = topicNames;
-        this.kafkaBroker = kafkaBroker;
-        this.stagingTopicName = stagingTopicName;
         this.objectMapper = new ObjectMapper();
     }
 

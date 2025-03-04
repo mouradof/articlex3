@@ -3,10 +3,8 @@ package rmn.ETL.stream.process.P0;
 import com.example.common_library.processes.P0_FileReader;
 import com.example.common_library.utils.StructuredDataGroup;
 import com.example.common_library.utils.StructuredFile;
-import com.example.common_library.utils.TopicNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import rmn.ETL.stream.entities.ARTICLEX3;
@@ -26,19 +24,13 @@ import java.util.Arrays;
 public class P0_ArticleX3_FileReader extends P0_FileReader<ARTICLEX3> {
 
     /**
-     * Constructs the file reader with the required structured file description, topic names,
-     * and Kafka configuration.
+     * Constructs the file reader with the required structured file description.
      *
      * @param structureDescription the description of the file structure
-     * @param topicNames           the topic names configuration for ARTICLEX3
-     * @param kafkaBroker          the Kafka broker address (default: kafka:9092)
-     * @param stagingTopicName     the Kafka staging topic name (default: staging_topic)
      */
     @Autowired
-    public P0_ArticleX3_FileReader(StructuredFile structureDescription, TopicNames<ARTICLEX3> topicNames,
-                                   @Value("${KAFKA_BROKER:kafka:9092}") String kafkaBroker,
-                                   @Value("${KAFKA_TOPIC_STAGING:staging_topic}") String stagingTopicName) {
-        super(structureDescription, ARTICLEX3.class, topicNames, kafkaBroker, stagingTopicName);
+    public P0_ArticleX3_FileReader(StructuredFile structureDescription) {
+        super(structureDescription, ARTICLEX3.class);
     }
 
     /**

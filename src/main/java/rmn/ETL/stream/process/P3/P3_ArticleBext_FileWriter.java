@@ -4,37 +4,33 @@ import com.example.common_library.processes.P3_Common_LoadProcess;
 import com.example.common_library.utils.StructuredFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import org.springframework.context.annotation.Profile;
 import rmn.ETL.stream.entities.ARTICLEX3_BEXT;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
 
 /**
  * Consumes transformed ARTICLEX3_BEXT messages from Kafka and writes them to an output file.
  * <p>
- * The file is written to a directory specified by the OUTPUT_DIRECTORY environment variable (or a default value).
+ * The output file is written in a directory specified by the OUTPUT_DIRECTORY environment variable (or a default value).
  */
 @Slf4j
 @Service
+@Profile("P3")
 public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_BEXT> implements CommandLineRunner {
 
-    // Output directory for the result file
+    // Output directory for the result file.
     private final String outputDirectory;
-    // Fixed name of the output file
+    // Fixed name of the output file.
     private final String outputFileName = "bext_final_output.txt";
-    // File structure configuration (separator, EOL, etc.)
+    // File structure configuration (separator, EOL, etc.).
     private final StructuredFile currentFileStructure;
-    // ObjectMapper for JSON deserialization
+    // ObjectMapper for JSON deserialization.
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -49,27 +45,6 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
         String envOutputDir = System.getenv("OUTPUT_DIRECTORY");
         this.outputDirectory = (envOutputDir == null || envOutputDir.isBlank()) ? "/app/output" : envOutputDir;
         log.info("P3_ArticleBext_FileWriter initialized with outputDirectory: {}", this.outputDirectory);
-    }
-
-    /**
-     * Loads Kafka consumer configuration properties.
-     *
-     * @return the Kafka consumer properties.
-     */
-    @Override
-    protected Properties loadConfig() {
-        Properties props = new Properties();
-        String bootstrapServers = System.getenv("KAFKA_BROKER");
-        if (bootstrapServers == null || bootstrapServers.isBlank()) {
-            bootstrapServers = "localhost:9092";
-        }
-        props.put("bootstrap.servers", bootstrapServers);
-        props.put("group.id", "p3-articlebext-filewriter");
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("auto.offset.reset", "earliest");
-        log.info("Kafka bootstrap.servers set to {}", bootstrapServers);
-        return props;
     }
 
     /**
@@ -149,55 +124,14 @@ public class P3_ArticleBext_FileWriter extends P3_Common_LoadProcess<ARTICLEX3_B
     }
 
     /**
-     * Starts the Kafka consumer process when the application starts.
+     * Entry point that starts the Kafka consumer process when the application starts.
+     * Delegates the Kafka consumption to the common load process.
      *
      * @param args command-line arguments.
      */
     @Override
     public void run(String... args) {
         log.info("Starting Kafka consumer for P3_ArticleBext_FileWriter...");
-        runProcess();
-    }
-
-    /**
-     * Consumes messages from Kafka and writes them to the output file.
-     */
-    private void runProcess() {
-        Properties props = loadConfig();
-        String topic = System.getenv("KAFKA_TOPIC_TRANSFORMED");
-        if (topic == null || topic.isBlank()) {
-            topic = "article_bext_transformed";
-        }
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(Collections.singletonList(topic));
-            log.info("Subscribed to Kafka topic: {}", topic);
-            while (true) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<String, String> record : records) {
-                    log.info("Received message: key={}, value={}", record.key(), record.value());
-                    ARTICLEX3_BEXT entity = convertRecordToEntity(record.value());
-                    if (entity != null) {
-                        loadTargetEntity(entity);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error in Kafka consumer loop: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * Converts a JSON message into an ARTICLEX3_BEXT entity.
-     *
-     * @param recordValue the JSON string.
-     * @return the converted entity or null if conversion fails.
-     */
-    private ARTICLEX3_BEXT convertRecordToEntity(String recordValue) {
-        try {
-            return objectMapper.readValue(recordValue, ARTICLEX3_BEXT.class);
-        } catch (Exception e) {
-            log.error("Error converting record to ARTICLEX3_BEXT: {}", e.getMessage());
-            return null;
-        }
+        super.run();
     }
 }

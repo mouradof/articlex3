@@ -13,6 +13,15 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
+/**
+ * Common transformation process that consumes validated entities from Kafka,
+ * transforms them, and produces the transformed entities to a target Kafka topic.
+ * <p>
+ * All Kafka configuration and topic references are centralized in this class.
+ *
+ * @param <T> the source entity type.
+ * @param <U> the target entity type.
+ */
 public abstract class P2_Common_TransformationProcess<T, U> {
 
     private static final Logger logger = LoggerFactory.getLogger(P2_Common_TransformationProcess.class);
@@ -43,11 +52,11 @@ public abstract class P2_Common_TransformationProcess<T, U> {
         String sourceTopic = topicNames.getValidatedTopicName();
         String targetTopic = topicNames.getTargetTopicName();
 
-        logger.info("🎯 TOPIC source: {}", sourceTopic);
-        logger.info("🎯 TOPIC cible: {}", targetTopic);
+        logger.info("Source topic: {}", sourceTopic);
+        logger.info("Target topic: {}", targetTopic);
 
         if (targetTopic == null || targetTopic.isBlank()) {
-            logger.error("❌ Erreur: le topic cible est null ou vide !");
+            logger.error("Error: target topic is null or empty!");
             return;
         }
 
@@ -64,7 +73,7 @@ public abstract class P2_Common_TransformationProcess<T, U> {
                 }
             }
         } catch (Exception e) {
-            logger.error("❌ ERREUR dans le process Kafka", e);
+            logger.error("Error during Kafka process", e);
         }
     }
 
@@ -81,7 +90,7 @@ public abstract class P2_Common_TransformationProcess<T, U> {
                 sendTargetEntity(producer, targetTopic, targetEntity, record.offset(), objectMapper);
             }
         } catch (Exception e) {
-            logger.error("❌ Erreur lors de la transformation", e);
+            logger.error("Error during transformation", e);
         }
     }
 
@@ -95,14 +104,36 @@ public abstract class P2_Common_TransformationProcess<T, U> {
             ProducerRecord<String, String> targetRecord = new ProducerRecord<>(targetTopic, targetEntityJson);
             targetRecord.headers().add(new RecordHeader("ENTITY_TYPE", targetEntityClass.getSimpleName().getBytes()));
             producer.send(targetRecord).get();
-            logger.info("✅ Message envoyé sur {}: {}", targetTopic, targetEntityJson);
+            logger.info("Message sent to {}: {}", targetTopic, targetEntityJson);
 
         } catch (Exception e) {
-            logger.error("❌ ERREUR d'envoi Kafka", e);
+            logger.error("Error sending Kafka message", e);
         }
     }
 
-    protected abstract Properties loadConfig();
+    /**
+     * Loads Kafka configuration properties.
+     * <p>
+     * All Kafka configuration is centralized in this method.
+     *
+     * @return the Kafka configuration properties.
+     */
+    protected Properties loadConfig() {
+        Properties props = new Properties();
+        String bootstrapServers = System.getenv("KAFKA_BROKER");
+        if (bootstrapServers == null || bootstrapServers.isBlank()) {
+            bootstrapServers = "kafka:9092";
+        }
+        props.put("bootstrap.servers", bootstrapServers);
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "earliest");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        logger.info("Kafka Properties: {}", props);
+        return props;
+    }
 
     private Properties loadConsumerConfig(Properties config) {
         Properties consumerConfig = new Properties();
@@ -115,11 +146,10 @@ public abstract class P2_Common_TransformationProcess<T, U> {
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
                 config.getOrDefault("auto.offset.reset", "earliest"));
 
-        System.out.println("✅ Kafka Consumer Properties : " + consumerConfig);
+        logger.info("Kafka Consumer Properties: {}", consumerConfig);
 
         return consumerConfig;
     }
-
 
     private Properties loadProducerConfig(Properties config) {
         Properties producerConfig = new Properties();
@@ -130,11 +160,16 @@ public abstract class P2_Common_TransformationProcess<T, U> {
         producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 config.getOrDefault("value.serializer", "org.apache.kafka.common.serialization.StringSerializer"));
 
-        System.out.println("✅ Kafka Producer Properties : " + producerConfig);
+        logger.info("Kafka Producer Properties: {}", producerConfig);
 
         return producerConfig;
     }
 
-
+    /**
+     * Transforms the given source entity to a target entity.
+     *
+     * @param sourceEntity the source entity to transform.
+     * @return the transformed target entity.
+     */
     public abstract U transformToTargetEntity(T sourceEntity);
 }

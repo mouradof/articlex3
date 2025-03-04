@@ -22,6 +22,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * Abstract common validation process that consumes staged entities from Kafka,
+ * validates them, and then produces them to either a validated or a rejected topic.
+ * <p>
+ * All Kafka topic references and configurations are handled in this class.
+ *
+ * @param <T> the type of the entity to be validated.
+ */
 @Service
 public abstract class P1_Common_ValidationProcess<T> {
 
@@ -40,12 +48,12 @@ public abstract class P1_Common_ValidationProcess<T> {
 
     @Async
     public void runProcess() {
-        Properties config = loadConfig();  // Chargement de la configuration (inclut la variable d'environnement pour le bootstrap server)
-        Properties stagingConsumerConfig = loadConsumerConfig(config);  // Chargement de la configuration pour le consommateur Kafka
+        Properties config = loadConfig();  // Load general configuration (includes bootstrap servers from environment variables)
+        Properties stagingConsumerConfig = loadConsumerConfig(config);  // Load Kafka consumer configuration
 
         stagingConsumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, this.getClass().getSimpleName());
 
-        // Récupération des noms de topics en donnant la priorité aux variables d'environnement
+        // Retrieve topic names, giving priority to environment variables if defined
         String stagingTopic = System.getenv("KAFKA_TOPIC_STAGING");
         if (stagingTopic == null) {
             stagingTopic = topicNames.getStagingTopicName();
@@ -61,9 +69,9 @@ public abstract class P1_Common_ValidationProcess<T> {
             rejectedTopic = topicNames.getRejectedTopicName();
         }
 
-        logger.info("TOPIC source: {}", stagingTopic);
-        logger.info("TOPIC cible validation: {}", validatedTopic);
-        logger.info("TOPIC cible rejet: {}", rejectedTopic);
+        logger.info("Source topic: {}", stagingTopic);
+        logger.info("Validated topic: {}", validatedTopic);
+        logger.info("Rejected topic: {}", rejectedTopic);
 
         long maxPollInterval = Long.parseLong(stagingConsumerConfig.getProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "300000"));
 
@@ -168,7 +176,7 @@ public abstract class P1_Common_ValidationProcess<T> {
         }
     }
 
-    // On charge ici la configuration générale en vérifiant la variable d'environnement pour le bootstrap servers
+    // Load general configuration, including bootstrap servers from environment variables
     private Properties loadConfig() {
         Properties properties = new Properties();
         String bootstrapServers = System.getenv("SPRING_KAFKA_BOOTSTRAP_SERVERS");
@@ -204,5 +212,11 @@ public abstract class P1_Common_ValidationProcess<T> {
         return producerConfig;
     }
 
+    /**
+     * Abstract method to validate the provided source entity.
+     *
+     * @param sourceEntity the entity to validate.
+     * @return a list of error messages, or an empty list if no validation errors are found.
+     */
     public abstract List<String> validateEntitySource(T sourceEntity);
 }

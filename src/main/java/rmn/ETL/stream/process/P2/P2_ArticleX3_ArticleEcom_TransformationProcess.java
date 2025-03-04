@@ -1,15 +1,22 @@
 package rmn.ETL.stream.process.P2;
 
 import com.example.common_library.processes.P2_Common_TransformationProcess;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
 import rmn.ETL.stream.entities.ARTICLEX3;
 import rmn.ETL.stream.entities.ARTICLEX3_ECOM;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.Properties;
 
+/**
+ * Transformation process that converts ARTICLEX3 entities to ARTICLEX3_ECOM entities.
+ * <p>
+ * Runs under the "P2" profile. Kafka configuration is handled in the superclass (loadConfig() is overridden).
+ */
 @Slf4j
 @Service
+@Profile("P2")
 public class P2_ArticleX3_ArticleEcom_TransformationProcess
         extends P2_Common_TransformationProcess<ARTICLEX3, ARTICLEX3_ECOM> {
 
@@ -25,14 +32,11 @@ public class P2_ArticleX3_ArticleEcom_TransformationProcess
             bootstrapServers = "kafka:9092";
         }
         props.put("bootstrap.servers", bootstrapServers);
-
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("auto.offset.reset", "earliest");
-
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
         return props;
     }
 
@@ -53,7 +57,7 @@ public class P2_ArticleX3_ArticleEcom_TransformationProcess
         try {
             return entity.getFirstLine("I").getFieldValue(fieldName).trim();
         } catch (Exception e) {
-            log.warn("Field '{}' not found for line type '{}'. Error: {}", fieldName, "I", e.getMessage());
+            log.warn("Field '{}' not found for line type 'I'. Error: {}", fieldName, e.getMessage());
             return null;
         }
     }

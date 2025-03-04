@@ -1,9 +1,7 @@
 package rmn.ETL.stream.process.P1;
 
 import com.example.common_library.processes.P1_Common_ValidationProcess;
-import com.example.common_library.utils.TopicNames;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -24,14 +22,12 @@ import java.util.List;
 public class P1_ArticleX3_ValidationProcess extends P1_Common_ValidationProcess<ARTICLEX3> implements CommandLineRunner {
 
     /**
-     * Constructor that injects the TopicNames configuration for ARTICLEX3 entities.
-     *
-     * @param topicNames the topic names configuration for ARTICLEX3.
+     * Default constructor.
+     * <p>
+     * All Kafka topic references and configurations are handled in the superclass.
      */
-    @Autowired
-    public P1_ArticleX3_ValidationProcess(TopicNames<ARTICLEX3> topicNames) {
+    public P1_ArticleX3_ValidationProcess() {
         super(ARTICLEX3.class);
-        this.topicNames = topicNames;
     }
 
     /**

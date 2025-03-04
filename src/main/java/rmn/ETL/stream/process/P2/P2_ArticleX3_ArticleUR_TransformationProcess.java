@@ -1,17 +1,24 @@
 package rmn.ETL.stream.process.P2;
 
 import com.example.common_library.processes.P2_Common_TransformationProcess;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
 import rmn.ETL.stream.entities.ARTICLEX3;
 import rmn.ETL.stream.entities.ARTICLEX3_UR;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * Transformation process that converts ARTICLEX3 entities to ARTICLEX3_UR entities.
+ * <p>
+ * Runs under the "P2" profile. All Kafka configuration is handled in the superclass.
+ */
 @Slf4j
 @Service
+@Profile("P2")
 public class P2_ArticleX3_ArticleUR_TransformationProcess
         extends P2_Common_TransformationProcess<ARTICLEX3, ARTICLEX3_UR> {
 
@@ -27,14 +34,11 @@ public class P2_ArticleX3_ArticleUR_TransformationProcess
             bootstrapServers = "kafka:9092";
         }
         props.put("bootstrap.servers", bootstrapServers);
-
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("auto.offset.reset", "earliest");
-
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
         return props;
     }
 
@@ -110,11 +114,9 @@ public class P2_ArticleX3_ArticleUR_TransformationProcess
 
     private List<ARTICLEX3_UR.Attribute> createAttributes(ARTICLEX3 sourceEntity) {
         List<ARTICLEX3_UR.Attribute> attributes = new ArrayList<>();
-
         attributes.add(createAttribute("CATEG", getFieldValue(sourceEntity, "I", "TCLCOD")));
         attributes.add(createAttribute("CLEGL", getFieldValue(sourceEntity, "I", "TSICOD1")));
         attributes.add(createAttribute("SECTEUR", getFieldValue(sourceEntity, "I", "TSICOD0")));
-
         return attributes;
     }
 

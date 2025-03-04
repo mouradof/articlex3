@@ -15,15 +15,22 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-@SuppressWarnings("unused")
+/**
+ * Common load process that consumes target entities from Kafka and passes them to the
+ * subclass for further processing (e.g. writing to a file).
+ * <p>
+ * All Kafka configuration and topic references are handled here.
+ *
+ * @param <U> the target entity type.
+ */
 public abstract class P3_Common_LoadProcess<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(P3_Common_LoadProcess.class);
 
-    // Classe de l'entité cible
+    // Class of the target entity.
     private final Class<U> targetEntityClass;
 
-    // Injection dynamique des noms de topics via TopicNames
+    // Injection of topic names via TopicNames.
     @Autowired
     private TopicNames<U> topicNames;
 
@@ -31,7 +38,7 @@ public abstract class P3_Common_LoadProcess<U> {
         this.targetEntityClass = targetEntityClass;
     }
 
-    // Flag pour contrôler l'exécution continue du processus
+    // Flag to control continuous execution of the process.
     private boolean keepRunning = true;
 
     public void stop() {
@@ -39,15 +46,16 @@ public abstract class P3_Common_LoadProcess<U> {
     }
 
     /**
-     * Méthode principale qui lance le processus de consommation et de traitement.
+     * Main method that launches the Kafka consumption process.
      */
     public void run() {
         Properties config = loadConfig();
         Properties consumerConfig = loadConsumerConfig(config);
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, this.getClass().getSimpleName());
 
+        // Retrieve the target topic from the injected TopicNames.
         String targetTopic = topicNames.getTargetTopicName();
-        logger.info("TOPIC cible: {}", targetTopic);
+        logger.info("Target topic: {}", targetTopic);
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerConfig)) {
             consumer.subscribe(Collections.singletonList(targetTopic));
@@ -56,8 +64,7 @@ public abstract class P3_Common_LoadProcess<U> {
             while (keepRunning) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    // Log pour vérifier la réception de messages
-                    logger.info("Message reçu : {}", record.value());
+                    logger.info("Received message: {}", record.value());
                     processRecord(record, objectMapper);
                 }
             }
@@ -67,10 +74,10 @@ public abstract class P3_Common_LoadProcess<U> {
     }
 
     /**
-     * Méthode qui traite chaque enregistrement Kafka.
+     * Processes each Kafka record by deserializing the JSON and invoking loadTargetEntity.
      *
-     * @param record       l'enregistrement Kafka
-     * @param objectMapper pour désérialiser le JSON
+     * @param record       the Kafka record.
+     * @param objectMapper for JSON deserialization.
      */
     private void processRecord(ConsumerRecord<String, String> record, ObjectMapper objectMapper) {
         String targetEntityJson = record.value();
@@ -97,11 +104,26 @@ public abstract class P3_Common_LoadProcess<U> {
     }
 
     /**
-     * Méthode abstraite à surcharger pour fournir la configuration Kafka.
+     * Loads the Kafka configuration properties.
+     * <p>
+     * This default implementation centralizes the Kafka configuration.
      *
-     * @return Properties pour le KafkaConsumer.
+     * @return Properties for the KafkaConsumer.
      */
-    protected abstract Properties loadConfig();
+    protected Properties loadConfig() {
+        Properties props = new Properties();
+        String bootstrapServers = System.getenv("KAFKA_BROKER");
+        if (bootstrapServers == null || bootstrapServers.isBlank()) {
+            bootstrapServers = "localhost:9092";
+        }
+        props.put("bootstrap.servers", bootstrapServers);
+        props.put("group.id", "p3-articlebext-filewriter");
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "earliest");
+        logger.info("Kafka bootstrap.servers set to {}", bootstrapServers);
+        return props;
+    }
 
     private Properties loadConsumerConfig(Properties config) {
         Properties consumerConfig = new Properties();
@@ -113,9 +135,9 @@ public abstract class P3_Common_LoadProcess<U> {
     }
 
     /**
-     * Méthode abstraite à implémenter par les sous-classes pour charger une entité.
+     * Abstract method to be implemented by subclasses to process (load) a target entity.
      *
-     * @param targetEntity l'entité cible à charger
+     * @param targetEntity the target entity to load.
      */
     public abstract void loadTargetEntity(U targetEntity);
 }
